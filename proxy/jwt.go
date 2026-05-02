@@ -36,9 +36,16 @@ func ExtractToken(r *http.Request) string {
 func VerifyJWT(tokenStr string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method")
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return fetchPublicKey()
+
+		// Get kid from token header
+		kid, ok := token.Header["kid"].(string)
+		if !ok {
+			return nil, errors.New("kid not found in token header")
+		}
+
+		return fetchPublicKeyByKid(kid)
 	}, jwt.WithIssuer(Issuer), jwt.WithExpirationRequired())
 
 	if err != nil {
@@ -52,10 +59,10 @@ func VerifyJWT(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
-func fetchPublicKey() (*rsa.PublicKey, error) {
+func fetchPublicKeyByKid(kid string) (*rsa.PublicKey, error) {
 	resp, err := http.Get(JwksURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -63,33 +70,38 @@ func fetchPublicKey() (*rsa.PublicKey, error) {
 
 	var jwks struct {
 		Keys []struct {
-			N string `json:"n"`
-			E string `json:"e"`
+			Kid string `json:"kid"`
+			Kty string `json:"kty"`
+			N   string `json:"n"`
+			E   string `json:"e"`
 		} `json:"keys"`
 	}
+
 	if err := json.Unmarshal(body, &jwks); err != nil {
-		return nil, err
-	}
-	if len(jwks.Keys) == 0 {
-		return nil, errors.New("no keys found")
+		return nil, fmt.Errorf("failed to parse JWKS: %w", err)
 	}
 
-	key := jwks.Keys[0]
+	// Match key by kid
+	for _, key := range jwks.Keys {
+		if key.Kid == kid && key.Kty == "RSA" {
+			nBytes, err := base64.RawURLEncoding.DecodeString(key.N)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode N: %w", err)
+			}
+			eBytes, err := base64.RawURLEncoding.DecodeString(key.E)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode E: %w", err)
+			}
 
-	nBytes, err := base64.RawURLEncoding.DecodeString(key.N)
-	if err != nil {
-		return nil, err
+			n := new(big.Int).SetBytes(nBytes)
+			e := new(big.Int).SetBytes(eBytes)
+
+			return &rsa.PublicKey{
+				N: n,
+				E: int(e.Int64()),
+			}, nil
+		}
 	}
-	eBytes, err := base64.RawURLEncoding.DecodeString(key.E)
-	if err != nil {
-		return nil, err
-	}
 
-	n := new(big.Int).SetBytes(nBytes)
-	e := new(big.Int).SetBytes(eBytes)
-
-	return &rsa.PublicKey{
-		N: n,
-		E: int(e.Int64()),
-	}, nil
+	return nil, fmt.Errorf("no matching key found for kid: %s", kid)
 }
