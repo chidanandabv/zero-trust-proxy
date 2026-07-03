@@ -15,7 +15,7 @@ import (
 )
 
 const JwksURL = "http://keycloak:8080/realms/company/protocol/openid-connect/certs"
-const Issuer = "http://localhost:8080/realms/company"
+const Issuer = "http://keycloak:8080/realms/company"
 
 type Claims struct {
 	Username    string `json:"preferred_username"`
