@@ -11,7 +11,7 @@ import (
 	"github.com/chidanandabv/zero-trust-proxy/proxy"
 )
 
-const BackendURL = "http://localhost:8081"
+const BackendURL = "http://fileserver:8082"
 
 func main() {
 	tlsCfg, err := proxy.BuildTLSConfig()
