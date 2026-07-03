@@ -1,0 +1,13 @@
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY fileserver/ ./fileserver/
+RUN go build -o fileserver ./fileserver/main.go
+
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/fileserver .
+RUN mkdir -p /app/files
+EXPOSE 8082
+CMD ["./fileserver"]

@@ -1,0 +1,6 @@
+FROM alpine:latest
+RUN apk add --no-cache curl
+WORKDIR /app
+COPY scripts/user_demo.sh .
+RUN chmod +x user_demo.sh
+CMD ["./user_demo.sh"]
