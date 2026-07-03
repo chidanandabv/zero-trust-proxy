@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/chidanandabv/zero-trust-proxy/proxy"
 )
@@ -44,7 +45,10 @@ func main() {
 		}
 
 		// Forward to backend
+
 		r.Header.Set("X-User", claims.Username)
+		roles := strings.Join(claims.RealmAccess.Roles, ",")
+		r.Header.Set("X-Role", roles)
 		reverseProxy.ServeHTTP(w, r)
 	})
 
