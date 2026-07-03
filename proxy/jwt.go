@@ -14,7 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const JwksURL = "http://localhost:8080/realms/company/protocol/openid-connect/certs"
+const JwksURL = "http://keycloak:8080/realms/company/protocol/openid-connect/certs"
 const Issuer = "http://localhost:8080/realms/company"
 
 type Claims struct {
