@@ -3,9 +3,25 @@ package proxy
 import "strings"
 
 var policies = map[string][]string{
-	"admin":                 {"/api/orders", "/api/admin", "/health"},
-	"default-roles-company": {"/api/orders", "/health"},
-	"uma_authorization":     {"/api/orders", "/health"},
+	"admin": {
+		"/files",
+		"/files/",
+		"/api/orders",
+		"/api/admin",
+		"/health",
+	},
+	"default-roles-company": {
+		"/files",
+		"/files/handbook.txt",
+		"/api/orders",
+		"/health",
+	},
+	"uma_authorization": {
+		"/files",
+		"/files/handbook.txt",
+		"/api/orders",
+		"/health",
+	},
 }
 
 func IsAllowed(claims *Claims, method, path string) bool {
